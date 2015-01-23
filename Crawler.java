@@ -5,59 +5,105 @@ import org.jsoup.Jsoup;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.Boolean;
 import java.lang.Integer;
 import java.lang.String;
 import java.lang.System;
 import java.util.ArrayList;
-
+import java.util.List;
 
 public class Crawler {
-    private ArrayList<String> links;
-    private Integer indexed;
-    private Integer depth;
+    private ArrayList<String> queue;
+    private Integer current;
+    private Integer results;
+    private Integer matched;
+    private String query;
 
     public void crawl() {
-            if(indexed < depth) {
-                String link = links.get(indexed);
-                try {
+        if (matched < results) {
+            String link = queue.get(current);
+            try {
+                System.out.println("Crawling: " + link);
 
-                    System.out.println("Crawling: "+ link);
-                    System.out.println("-----");
-                    Document doc = Jsoup.connect(link).get();
-                    String title = doc.title();
-                    System.out.println("Index#: "+ (indexed+1));
-                    System.out.println("Title: "+ title);
+                Document doc = Jsoup.connect(link).get();
 
-                    try {
-                        FileWriter fw = new FileWriter("database.csv", true);
-                        fw.write("\"" + title + "\", " + link + "\n");
-                        fw.close();
-                        indexed+=1;
-                    } catch (IOException ioe) {
-                        System.err.println("IOException: " + ioe.getMessage());
-                    }
-                    System.out.println("-----------------");
+                String title = doc.title();
+                Element description = doc.select("meta[name=description]").first();
+                Element keywords = doc.select("meta[name=keywords]").first();
+                System.out.println(title);
 
-                    Elements anchors = doc.select("a[href]");
-                    for (Element anchor : anchors) {
-                        this.links.add(anchor.absUrl("href"));
-                    }
+                if (title == null && description == null && keywords == null) {
+                    current += 1;
                     crawl();
-                } catch (IOException ex) {
-                    System.out.println(ex.toString());
+                } else {
+                    String site = buildSite(link, title, description, keywords);
+                    if (title != null && ! title.isEmpty() && title.toLowerCase().indexOf(query) > -1) {
+                        store(site);
+                        matched+=1;
+                    } else if (keywords != null && keywords.attr("content") != null && ! keywords.attr("content").isEmpty() && keywords.attr("content").toLowerCase().indexOf(query) > -1 ) {
+                        store(site);
+                        matched+=1;
+                    } else if (description != null && description.attr("content") != null && ! description.attr("content").isEmpty() && description.attr("content").toLowerCase().indexOf(query) > -1 ) {
+                        store(site);
+                        matched+=1;
+                    }
+                    current+=1;
+
+                    for (Element anchor : doc.select("a[href]")) {
+                        if(! this.queue.contains(anchor.absUrl("href"))) {
+                            this.queue.add(anchor.absUrl("href"));
+                        }
+                    }
+
+                    crawl();
                 }
+
+            } catch (IOException ex) {
+                System.out.println(ex.toString());
             }
+        }
     }
 
-    Crawler (String seed, Integer depth) {
-        this.links = new ArrayList<String>();
-        this.indexed = 0;
+    public void store (String site) {
+        try {
+            FileWriter fw = new FileWriter("results.txt", true);
 
-        this.links.add(seed);
-        if (depth > 0) {
-            this.depth = depth;
-        } else {
-            this.depth = 100;
+            fw.write(site);
+
+            fw.close();
+
+        } catch (IOException ioe) {
+            System.err.println("IOException: " + ioe.getMessage());
         }
+    }
+
+    public String buildSite(String link, String title, Element description, Element keywords) {
+        String site = title + "\n" + "-----\n" + "url: " + link + "\n";
+
+        if (description != null && description.attr("content") != null && ! description.attr("content").isEmpty()) {
+            site+="description: " + description.attr("content") + "\n";
+        }
+
+        if (keywords != null && keywords.attr("content") != null && ! keywords.attr("content").isEmpty()) {
+            site += "keywords: " + keywords.attr("content") + "\n";
+        }
+
+        site+="\n";
+
+        return site;
+    }
+
+    Crawler (String seed, Integer results, String query) {
+        this.queue = new ArrayList<String>();
+        this.current = 0;
+        this.matched = 0;
+        this.queue.add(seed);
+        this.query = query;
+        if (results > 0) {
+            this.results = results;
+        } else {
+            this.results = 10;
+        }
+
     }
 }
