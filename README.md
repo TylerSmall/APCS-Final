@@ -1,21 +1,16 @@
-APCS-Final
+Goosky
 ==========
 
-# WebCrawler
-- crawl(url)
-  - should search the csv file for a matching url
-  - should not get the same page twice
-  - should take the url param and get the pae
-  - should parse out the page title
-  - should parse out all links
-  - should write the url to the csv file
-  - should write the title to the csv file
-  - should escape the title if necessary
-  - should call itself for each link found on the page
+# Use
+## Search
+`java Goosky <url> <num> <query>`
 
-# SearchEngine
-- search(query, url)
-  - should check if query is url
-    - should search csv file for url
-  - should search titles and urls for instances of query
-  - should return pages where keywords appear
+- url: The seed url for the crawler to start on
+- num: The number of results you want the crawler to find
+- query: The query you want to search each page for
+
+Example: `java Goosky http://en.wikipedia.org/wiki/Apple 100 pit`
+
+## Results
+Results are appended to a file named `results.txt` in the same directory.
+
